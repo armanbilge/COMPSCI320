@@ -6,17 +6,8 @@
 
 import sys
 import itertools as it
-from collections import deque
-
-def invert(X):
-    Y = [0] * len(X)
-    for i, x in enumerate(X):
-        Y[x] = i
-    return Y
 
 def gale_shapley(blue, pink):
-
-    pink = [invert(x) for x in pink]
 
     n = len(blue)
     free_blue = set(range(n))
@@ -36,15 +27,14 @@ def gale_shapley(blue, pink):
 
     while any(len(blue[i]) > 0 for i in free_blue):
         b = next(i for i in free_blue if len(blue[i]) > 0)
-        p = blue[b].popleft()
+        p = blue[b].pop(0)
         if p in free_pink:
             engage(b, p)
         else:
             bp = next(x[0] for x in pairs if x[1] == p)
-            if (pink[p][b] < pink[p][bp]):
+            if (pink[p].index(b) < pink[p].index(bp)):
                 free((bp, p))
                 engage(b, p)
-
     return pairs
 
 for i in it.islice(it.count(), 1, None):
@@ -52,7 +42,7 @@ for i in it.islice(it.count(), 1, None):
     if n == 0:
         break
     parse = lambda i: int(i) - 1
-    blue = [deque(map(parse, sys.stdin.readline().split())) for _ in range(n)]
+    blue = [list(map(parse, sys.stdin.readline().split())) for _ in range(n)]
     pink = [list(map(parse, sys.stdin.readline().split())) for _ in range(n)]
     pairs = sorted(gale_shapley(blue, pink))
     print('Instance {}:'.format(i))
