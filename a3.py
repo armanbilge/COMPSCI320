@@ -7,6 +7,7 @@
 import sys
 import math
 import itertools as it
+import operator as op
 from collections import namedtuple
 
 def distance(x, y):
@@ -22,18 +23,24 @@ def distance(x, y):
     dist = math.degrees(dist) * 60 * 1.1515 * 1.609344
     return dist
 
-def closest_pair(loci):
-    if len(loci) == 2:
-        return loci[0], loci[1], distance(loci[0], loci[1])
-    elif len(loci) == 3:
-        return min(((x, y, distance(x, y)) for x,y in it.combinations(loci, 2)), key=lambda p: p[2])
-    split = sum(locus.lat for locus in loci) / len(loci)
-    A = [locus for locus in loci if locus.lat <= split]
-    B = [locus for locus in loci if locus.lat > split]
-    a = closest_pair(A)
-    b = closest_pair(B)
-    pairs = it.chain([a, b], ((x, y, distance(x, y)) for x in A for y in B))
+def min_pair(pairs):
     return min(pairs, key=lambda p: p[2])
+
+def closest_pair(loci):
+
+    n = len(loci)
+
+    if n <= 3:
+        return min_pair((x, y, distance(x, y)) for x, y in it.combinations(loci, 2))
+
+    L, R = loci[:n//2], loci[n//2:]
+    split = R[-1].lat
+
+    closest = min(closest_pair(L), closest_pair(R), key=op.itemgetter(2))
+    loci = (locus for locus in loci if abs(locus.lat - split) < closest[2])
+    pairs = it.chain([closest], ((x, y, distance(x, y)) for x, y in it.combinations(loci, 2)))
+
+    return min_pair(pairs)
 
 Locus = namedtuple('Locus', ['city', 'lat', 'lon'])
 
@@ -46,6 +53,7 @@ while N > 0:
         lat, lon = map(float, l[-2:])
         city = ' '.join(l[:-2])
         loci.append(Locus(city, lat, lon))
+    loci.sort(key=op.attrgetter('lat'))
     a, b, d = closest_pair(loci)
     a, b = sorted([a.city, b.city])
     print('Scenario {}:'.format(next(C)))
