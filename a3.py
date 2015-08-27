@@ -11,7 +11,10 @@ import operator as op
 from collections import namedtuple
 
 def distance(x, y):
-    return math.acos(x.sin * y.sin + x.cos * y.cos * math.cos(x.lon - y.lon)) * 6370.69348565306
+    return math.acos(min(max(x.sin * y.sin + x.cos * y.cos * math.cos(x.lon - y.lon), -1), 1)) * 6370.693485653059
+
+def lon_distance(x, ysin, ycos):
+    return math.acos(min(max(x.sin * ysin + x.cos * ycos, -1), 1)) * 6370.693485653059
 
 def min_pair(pairs):
     return min(pairs, key=op.itemgetter(2))
@@ -25,9 +28,10 @@ def closest_pair(loci):
 
     L, R = loci[:n//2], loci[n//2:]
     split = R[-1].lat
+    sinsplit, cossplit = math.sin(split), math.cos(split)
 
     closest = min_pair((closest_pair(L), closest_pair(R)))
-    loci = (locus for locus in loci if abs(locus.lat - split) < closest[2])
+    loci = (locus for locus in loci if lon_distance(locus, sinsplit, cossplit) < closest[2])
     pairs = it.chain((closest,), ((x, y, distance(x, y)) for x, y in it.combinations(loci, 2)))
 
     return min_pair(pairs)
@@ -40,8 +44,8 @@ while N > 0:
     loci = []
     for _ in range(N):
         l = sys.stdin.readline().split()
-        lat, lon = map(float, l[-2:])
-        sin, cos = math.sin(math.radians(lat)), math.cos(math.radians(lat))
+        lat, lon = map(math.radians, map(float, l[-2:]))
+        sin, cos = math.sin(lat), math.cos(lat)
         city = ' '.join(l[:-2])
         loci.append(Locus(city, lat, lon, sin, cos))
     loci.sort(key=op.attrgetter('lat'))
