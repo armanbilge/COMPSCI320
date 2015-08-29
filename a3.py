@@ -13,9 +13,6 @@ from collections import namedtuple
 K = 6370.693485653059
 twopi = 2 * math.pi
 
-def normalized(rad):
-    return (rad + math.pi) % twopi - math.pi
-
 def distance(x, y):
     return math.acos(min(max(x.sin * y.sin + x.cos * y.cos * math.cos(x.lon - y.lon), -1), 1)) * K
 
@@ -26,20 +23,23 @@ def lon_angle(d, sin2x, cos2x):
     return math.acos(min(max((math.cos(d / K) - sin2x) / cos2x, -1), 1))
 
 def in_bounds(theta, a, b):
+    if a == b:
+        return True
     if theta < a:
         theta += twopi
-    return p_theta <= a + b
+    return theta <= a + (b - a) % twopi
 
 def closest_pair(loci, loci_):
 
     n = len(loci)
 
     if n <= 3:
-        return min_pair((x, y, distance(x, y)) for x, y in it.combinations(loci, 2))
+        return min(((x, y, distance(x, y)) for x, y in it.combinations(loci, 2)), key=op.itemgetter(2))
 
     L, R = loci[:n//2], loci[n//2:]
-    split = R[-1].lat
-    L_, R_ = [l for l in loci_ if l in L], [r for r in loci_ if r in R]
+    split = L[-1].lat
+    setL, setR = set(L), set(R)
+    L_, R_ = [l for l in loci_ if l in setL], [r for r in loci_ if r in setR]
 
     sin_split, cos_split = math.sin(split), math.cos(split)
     sin2split, cos2split = sin_split * sin_split, cos_split * cos_split
@@ -48,22 +48,22 @@ def closest_pair(loci, loci_):
 
     L = (l for l in L_ if lat_distance(l, sin_split, cos_split) < closest[2])
     R = [r for r in R_ if lat_distance(r, sin_split, cos_split) < closest[2]]
+    theta = lon_angle(closest[2], sin2split, cos2split)
     lenR = len(R)
-    i = 0
-    def inc():
-        i = i + 1 % lenR
-    for x in L:
-        theta = lon_angle(closest[2], sin2split, cos2split)
-        a, b = normalized(x.lon - theta)
-        while a > R[i].lon:
-            inc()
+    if lenR > 0:
+        i = 0
+        j = (i+1) % lenR
+        for x in L:
+            a, b = (x.lon - theta) % twopi, (x.lon + theta) % twopi
+            while not in_bounds(a, R[i].lon, R[j].lon):
+                i = (i+1) % lenR
+                j = (j+1) % lenR
+            while not in_bounds(b, R[i].lon, R[j].lon):
+                closest = min(closest, (x, R[j], distance(x, R[j])), key=op.itemgetter(2))
+                i = (i+1) % lenR
+                j = (j+1) % lenR
 
-
-    loci = (locus for locus in loci if lat_distance(locus, sin_split, cos_split) < closest[2])
-    pairs = ((x, y, distance(x, y)) for x, y in it.combinations(loci, 2))
-    pairs = it.chain((closest,), pairs)
-
-    return min_pair(pairs)
+    return closest
 
 Locus = namedtuple('Locus', ('city', 'lat', 'lon', 'sin', 'cos'))
 
@@ -74,6 +74,7 @@ while N > 0:
     for _ in range(N):
         l = sys.stdin.readline().split()
         lat, lon = map(math.radians, map(float, l[-2:]))
+        lon %= twopi
         sin, cos = math.sin(lat), math.cos(lat)
         city = ' '.join(l[:-2])
         loci.append(Locus(city, lat, lon, sin, cos))
