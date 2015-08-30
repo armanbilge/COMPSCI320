@@ -8,7 +8,6 @@ import sys
 import math
 import itertools as it
 import operator as op
-from collections import namedtuple
 
 K = 6370.693485653059
 twopi = 2 * math.pi
@@ -35,9 +34,10 @@ def closest_pair(loci, loci_):
         return min(((x, y, distance(x, y)) for x, y in it.combinations(loci, 2)), key=op.itemgetter(2))
 
     L, R = loci[:n//2], loci[n//2:]
+    for l in L: l.l = True
+    for l in R: l.l = False
     split = L[-1].lat
-    setL, setR = set(L), set(R)
-    L_, R_ = [l for l in loci_ if l in setL], [r for r in loci_ if r in setR]
+    L_, R_ = [l for l in loci_ if l.l], [r for r in loci_ if not r.l]
 
     sin_split, cos_split = math.sin(split), math.cos(split)
     sin2split, cos2split = sin_split * sin_split, cos_split * cos_split
@@ -63,7 +63,13 @@ def closest_pair(loci, loci_):
 
     return closest
 
-Locus = namedtuple('Locus', ('city', 'lat', 'lon', 'sin', 'cos'))
+class Locus:
+    def __init__(self, city, lat, lon, sin, cos):
+        self.city = city
+        self.lat = lat
+        self.lon = lon
+        self.sin = sin
+        self.cos = cos
 
 N = int(sys.stdin.readline())
 C = it.count(1)
