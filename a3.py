@@ -25,9 +25,7 @@ def lon_angle(d, sin2x, cos2x):
 def in_bounds(theta, a, b):
     if a == b:
         return True
-    if theta < a:
-        theta += twopi
-    return theta <= a + (b - a) % twopi
+    return (theta - a) % twopi <= (b - a) % twopi
 
 def closest_pair(loci, loci_):
 
