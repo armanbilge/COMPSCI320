@@ -1,24 +1,21 @@
-from networkx import DiGraph, maximum_flow_value, maximum_flow, min_cost_flow, max_flow_min_cost
+import itertools as it
+from networkx import DiGraph, max_flow_min_cost
+
+f = lambda star, k: '{}_{}'.format(star, k)
 
 for g in range(1, int(input()) + 1):
     N, M = map(int, input().split())
     G = DiGraph()
-    G.add_node(0)
-    G.add_node(1)
-    stars = []
-    for _ in range(N):
-        star = input().strip()
-        stars.append(star)
-        G.add_node(star)
-        G.add_edge(0, star, {'capacity': 1.0})
+    stars = [input().strip() for _ in range(N)]
+    for star, k in it.product(stars, range(M)):
+        G.add_edge(f(star, k), 1, {'capacity': 1})
     for _ in range(M):
         l = input().strip().split()
         donor, favs = l[0], l[1:]
-        G.add_edge(donor, 1, {'capacity': 1.0})
+        G.add_edge(0, donor, {'weight': 0, 'capacity': 1})
+        n = len(favs)
         for fav in favs:
-            G.add_edge(fav, donor, {'capacity': 1.0})
-    _, mf = maximum_flow(G, 0, 1)
-    print(mf)
-    for s in stars:
-        print(mf[s].values())
-    print('Event {}:'.format(g), max(sum(mf[s].values()) for s in stars))
+            for k in range(M):
+                G.add_edge(donor, f(fav, k), {'weight': k + 1})
+    mfmc = max_flow_min_cost(G, 0, 1)
+    print('Event {}:'.format(g), max(sum(mfmc[f(star, k)][1] for k in range(M)) for star in stars))
